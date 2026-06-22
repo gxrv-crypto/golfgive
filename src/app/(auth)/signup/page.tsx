@@ -48,39 +48,40 @@ function SignupForm() {
   }
 
   return (
-    <Card className="border-2">
-      <CardHeader>
-        <CardTitle className="font-display text-2xl">Create your account</CardTitle>
-        <CardDescription>
+    <Card className="border border-border/40 bg-background/70 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden">
+      <CardHeader className="space-y-1.5 p-6 md:p-8 pb-4">
+        <CardTitle className="font-display text-2xl font-extrabold text-foreground">Create your account</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
           Play golf with purpose. Subscribe in the next step.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      
+      <CardContent className="p-6 md:p-8 pt-0 space-y-6">
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Full name</Label>
-            <Input id="name" name="name" required placeholder="Jordan Player" />
+            <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Full Name</Label>
+            <Input id="name" name="name" required placeholder="Jordan Player" className="rounded-xl h-11 border-border/60 bg-background/50 focus:bg-background transition-all" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required placeholder="you@example.com" />
+            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Email Address</Label>
+            <Input id="email" name="email" type="email" required placeholder="you@example.com" className="rounded-xl h-11 border-border/60 bg-background/50 focus:bg-background transition-all" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" required placeholder="At least 8 characters" />
+            <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Password</Label>
+            <Input id="password" name="password" type="password" required placeholder="At least 8 characters" className="rounded-xl h-11 border-border/60 bg-background/50 focus:bg-background transition-all" />
           </div>
           <Button
             type="submit"
-            className="w-full rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
+            className="w-full rounded-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold shadow-md transition-all hover:scale-101 hover:shadow-lg gap-1.5"
             disabled={pending}
           >
             {pending && <Loader2 className="size-4 animate-spin" />} Continue
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link href="/login" className="font-semibold text-primary hover:underline">
             Log in
           </Link>
         </p>

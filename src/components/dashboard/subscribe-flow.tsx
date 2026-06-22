@@ -9,10 +9,41 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { PLANS, MIN_CHARITY_PCT, type PlanId } from "@/lib/config";
+import { PLANS, MIN_CHARITY_PCT, APP, type PlanId } from "@/lib/config";
 import { formatCurrency } from "@/lib/format";
-import { subscribeAction } from "@/lib/actions/subscription-actions";
+import {
+  startSubscriptionAction,
+  verifySubscriptionAction,
+} from "@/lib/actions/subscription-actions";
 import type { Charity } from "@/types";
+
+/** Razorpay Checkout is injected at runtime. */
+interface RazorpayCheckout {
+  open: () => void;
+  on: (event: string, handler: (resp: unknown) => void) => void;
+}
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_subscription_id: string;
+  razorpay_signature: string;
+}
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => RazorpayCheckout;
+  }
+}
+
+function loadRazorpay(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 export function SubscribeFlow({ charities }: { charities: Charity[] }) {
   return (
@@ -35,18 +66,72 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
   );
   const [pct, setPct] = React.useState(MIN_CHARITY_PCT);
 
+  function finish(message: string) {
+    toast.success(message);
+    router.push("/dashboard");
+    router.refresh();
+  }
+
   function pay() {
     if (!charityId) return toast.error("Choose a charity");
     start(async () => {
-      const res = await subscribeAction({ plan, charityId, charityPct: pct });
-      if (!res.ok) { toast.error(res.error); return; }
-      toast.success(
-        res.data?.mock
-          ? "Subscription activated (demo mode — no live payment)"
-          : "Payment successful — you're subscribed!",
-      );
-      router.push("/dashboard");
-      router.refresh();
+      const res = await startSubscriptionAction({ plan, charityId, charityPct: pct });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      const data = res.data!;
+
+      // Mock mode (no live keys) — already activated server-side.
+      if (data.mock) {
+        finish("Subscription activated (demo mode — no live payment)");
+        return;
+      }
+
+      // Real Razorpay Checkout.
+      const loaded = await loadRazorpay();
+      if (!loaded || !window.Razorpay) {
+        toast.error("Couldn't load the payment gateway. Check your connection.");
+        return;
+      }
+
+      const rzp = new window.Razorpay({
+        key: data.keyId,
+        subscription_id: data.subscriptionId,
+        name: APP.name,
+        description: `${PLANS[plan].name} subscription`,
+        prefill: { name: data.name, email: data.email },
+        theme: { color: "#0d9488" },
+        handler: (response: RazorpayResponse) => {
+          start(async () => {
+            const v = await verifySubscriptionAction({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_subscription_id: response.razorpay_subscription_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            if (!v.ok) {
+              toast.error(v.error);
+              return;
+            }
+            finish("Payment successful — you're subscribed!");
+          });
+        },
+        modal: { ondismiss: () => toast.info("Payment cancelled") },
+      });
+
+      rzp.on("payment.failed", (resp: unknown) => {
+        const desc =
+          (resp as { error?: { description?: string } })?.error?.description ??
+          "Payment failed. Please try again.";
+        toast.error(desc);
+      });
+
+      try {
+        rzp.open();
+      } catch (e) {
+        console.error("[razorpay] open failed", e);
+        toast.error("Could not open the payment window.");
+      }
     });
   }
 

@@ -97,13 +97,36 @@ Layered access control mirrors SystemDesign §04:
 
 ---
 
-## 🔌 Going live (optional integrations)
+## 🗄️ Supabase (auth + database)
 
-Copy `.env.example` → `.env.local` and fill in any of the following. Each one is
-independent — add only what you need.
+The app uses **Supabase Auth + Postgres automatically when env vars are present**
+(`getRepos()` returns the Supabase adapter; `auth-service`/`session` use Supabase
+Auth with `@supabase/ssr` cookies). With no env vars it falls back to the
+in-memory store — same code, zero config.
 
-- **Supabase** — create a new project, run `supabase/schema.sql`, set the URL/keys.
-  Implement the Supabase repository behind `getRepos()` in `src/lib/db/repositories.ts`.
+Setup:
+
+```bash
+# 1. Create a new Supabase project, then run the schema in its SQL editor:
+#    supabase/schema.sql   (includes payout columns for fresh projects)
+# 2. Put the URL + anon + service-role keys in .env.local
+# 3. If you created the project earlier, apply pending migrations:
+#    paste supabase/migrations/*.sql into the SQL editor, OR
+#    add SUPABASE_ACCESS_TOKEN to .env.local and run:
+npm run migrate
+# 4. Create an admin and seed demo data:
+npm run create:admin     # admin@golfgive.app / admin1234
+npm run seed             # charities + player@golfgive.app / player1234 + a draw
+```
+
+Both scripts use the service-role key and Node's `--env-file=.env.local`.
+The data repository uses the service-role client on the trusted server; access
+control is enforced in the app layer (action/layout guards), with **RLS** in the
+schema as defence-in-depth.
+
+## 🔌 Other integrations (optional)
+
+Fill in any of these in `.env.local`. Each is independent.
 - **Razorpay** — set `RAZORPAY_KEY_ID/SECRET`, create plans and set
   `RAZORPAY_PLAN_MONTHLY/YEARLY`, point the webhook at `/api/webhooks/razorpay`
   with `RAZORPAY_WEBHOOK_SECRET`. Mock mode is used until keys are present.

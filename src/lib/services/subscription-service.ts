@@ -22,6 +22,21 @@ export async function isActive(userId: string): Promise<boolean> {
   return true;
 }
 
+/** Record a not-yet-paid subscription before opening Razorpay Checkout. */
+export async function setPendingSubscription(
+  userId: string,
+  plan: PlanId,
+  refs: { razorpaySubscriptionId?: string; razorpayCustomerId?: string } = {},
+): Promise<Subscription> {
+  return getRepos().subscriptions.upsert({
+    userId,
+    plan,
+    status: "pending",
+    razorpaySubscriptionId: refs.razorpaySubscriptionId ?? null,
+    razorpayCustomerId: refs.razorpayCustomerId ?? null,
+  });
+}
+
 /** Activate a subscription after successful checkout. */
 export async function activateSubscription(
   userId: string,

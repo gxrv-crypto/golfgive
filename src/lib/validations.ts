@@ -72,6 +72,29 @@ export const runDrawSchema = z.object({
 });
 export type RunDrawInput = z.infer<typeof runDrawSchema>;
 
+export const payoutSchema = z
+  .object({
+    payoutUpi: z.string().trim().max(100).optional().default(""),
+    payoutAccountName: z.string().trim().max(120).optional().default(""),
+    payoutAccountNumber: z
+      .string()
+      .trim()
+      .max(40)
+      .regex(/^\d*$/, "Digits only")
+      .optional()
+      .default(""),
+    payoutIfsc: z.string().trim().toUpperCase().max(15).optional().default(""),
+  })
+  .refine((d) => d.payoutUpi.length > 0 || d.payoutAccountNumber.length > 0, {
+    message: "Add a UPI ID or a bank account",
+    path: ["payoutUpi"],
+  })
+  .refine((d) => d.payoutAccountNumber.length === 0 || d.payoutIfsc.length > 0, {
+    message: "IFSC is required with a bank account",
+    path: ["payoutIfsc"],
+  });
+export type PayoutInput = z.infer<typeof payoutSchema>;
+
 export const donationSchema = z.object({
   charityId: z.string().min(1),
   amount: z.number().positive("Enter an amount"),

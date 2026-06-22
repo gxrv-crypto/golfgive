@@ -15,7 +15,19 @@ export interface Profile {
   charityPct: number;
   /** Lucky numbers the subscriber plays in draws (1..45, length 5). */
   luckyNumbers: number[];
+  /** Payout details for claiming winnings (set by the winner). */
+  payoutUpi?: string | null;
+  payoutAccountName?: string | null;
+  payoutAccountNumber?: string | null;
+  payoutIfsc?: string | null;
   createdAt: string;
+}
+
+export interface PayoutDetails {
+  payoutUpi: string | null;
+  payoutAccountName: string | null;
+  payoutAccountNumber: string | null;
+  payoutIfsc: string | null;
 }
 
 export type SubscriptionStatus =

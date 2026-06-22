@@ -14,5 +14,19 @@ export function toError(err: unknown): { ok: false; error: string } {
     if (err.message === "FORBIDDEN") return { ok: false, error: "Not allowed" };
     return { ok: false, error: err.message };
   }
+  // Non-Error throws (e.g. Razorpay/Supabase reject with plain objects).
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    const rzp = e.error as { description?: string } | undefined;
+    const msg =
+      rzp?.description ??
+      (typeof e.message === "string" ? e.message : undefined) ??
+      (typeof e.msg === "string" ? e.msg : undefined);
+    if (msg) {
+      console.error("[action error]", err);
+      return { ok: false, error: msg };
+    }
+  }
+  console.error("[action error]", err);
   return { ok: false, error: "Something went wrong" };
 }

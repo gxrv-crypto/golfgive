@@ -3,7 +3,19 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Menu, LogOut, ChevronDown, type LucideIcon } from "lucide-react";
+import {
+  Menu,
+  LogOut,
+  ChevronDown,
+  LayoutDashboard,
+  ClipboardList,
+  Dice5,
+  HeartHandshake,
+  Trophy,
+  Settings,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/shared/logo";
@@ -21,11 +33,36 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { logoutAction } from "@/lib/actions/auth-actions";
 import type { SessionUser } from "@/types";
 
-export interface NavItem {
+interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
 }
+
+export type NavVariant = "subscriber" | "admin";
+
+/**
+ * Nav definitions live in this client module so the icon *components* never
+ * cross the server→client boundary (React can't serialize functions/objects).
+ * Layouts pass a string `variant` instead.
+ */
+const NAV: Record<NavVariant, NavItem[]> = {
+  subscriber: [
+    { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { href: "/dashboard/scores", label: "My Scores", icon: ClipboardList },
+    { href: "/dashboard/draws", label: "Draws", icon: Dice5 },
+    { href: "/dashboard/charity", label: "Charity", icon: HeartHandshake },
+    { href: "/dashboard/winnings", label: "Winnings", icon: Trophy },
+    { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  ],
+  admin: [
+    { href: "/admin", label: "Overview", icon: LayoutDashboard },
+    { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin/draws", label: "Draws", icon: Dice5 },
+    { href: "/admin/charities", label: "Charities", icon: HeartHandshake },
+    { href: "/admin/winners", label: "Winners", icon: Trophy },
+  ],
+};
 
 function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -60,15 +97,16 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
 
 export function DashboardShell({
   user,
-  items,
+  variant,
   children,
 }: {
   user: SessionUser;
-  items: NavItem[];
+  variant: NavVariant;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const items = NAV[variant];
   const title =
     [...items]
       .sort((a, b) => b.href.length - a.href.length)

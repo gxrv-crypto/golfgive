@@ -6,6 +6,8 @@
  * env vars are present, without touching any service or UI code.
  */
 import { db, uid } from "@/lib/db/store";
+import { isSupabaseConfigured } from "@/lib/config";
+import { supabaseRepos } from "@/lib/db/supabase-repositories";
 import type {
   Profile,
   Subscription,
@@ -312,10 +314,9 @@ const memoryRepos: Repositories = {
 };
 
 /**
- * Resolve the active repository implementation. Returns the in-memory repos
- * today; when a Supabase adapter is added it can be selected here based on
- * `isSupabaseConfigured()` — services never change.
+ * Resolve the active repository implementation: Supabase when configured,
+ * the in-memory store otherwise. Services and UI never change.
  */
 export function getRepos(): Repositories {
-  return memoryRepos;
+  return isSupabaseConfigured() ? supabaseRepos : memoryRepos;
 }

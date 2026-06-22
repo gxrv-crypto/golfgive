@@ -1,9 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
-import { setLuckyNumbers, updateName } from "@/lib/services/profile-service";
+import { setLuckyNumbers, updateName, setPayoutDetails } from "@/lib/services/profile-service";
 import { selectCharity, donate } from "@/lib/services/charity-service";
 import { type ActionResult, toError } from "@/lib/actions/result";
+import type { PayoutInput } from "@/lib/validations";
 
 export async function setLuckyNumbersAction(numbers: number[]): Promise<ActionResult> {
   try {
@@ -51,6 +52,19 @@ export async function updateNameAction(name: string): Promise<ActionResult> {
     const user = await requireRole("subscriber", "admin");
     await updateName(user.id, name);
     revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (err) {
+    return toError(err);
+  }
+}
+
+export async function setPayoutDetailsAction(
+  input: Partial<PayoutInput>,
+): Promise<ActionResult> {
+  try {
+    const user = await requireRole("subscriber", "admin");
+    await setPayoutDetails(user.id, input);
+    revalidatePath("/dashboard/winnings");
     return { ok: true };
   } catch (err) {
     return toError(err);

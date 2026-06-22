@@ -20,6 +20,11 @@ create table profiles (
   charity_id uuid,
   charity_pct int not null default 10 check (charity_pct between 10 and 100),
   lucky_numbers int[] not null default '{}',
+  -- Payout details for claiming winnings (set by the winner).
+  payout_upi text,
+  payout_account_name text,
+  payout_account_number text,
+  payout_ifsc text,
   created_at timestamptz not null default now()
 );
 

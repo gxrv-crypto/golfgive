@@ -3,7 +3,7 @@
  */
 import "server-only";
 import { getRepos } from "@/lib/db/repositories";
-import { luckyNumbersSchema } from "@/lib/validations";
+import { luckyNumbersSchema, payoutSchema } from "@/lib/validations";
 import type { Profile } from "@/types";
 
 export async function getProfile(userId: string): Promise<Profile | null> {
@@ -19,6 +19,16 @@ export async function setLuckyNumbers(userId: string, input: unknown): Promise<P
 
 export async function updateName(userId: string, name: string): Promise<Profile> {
   return getRepos().profiles.update(userId, { name: name.trim() });
+}
+
+export async function setPayoutDetails(userId: string, input: unknown): Promise<Profile> {
+  const d = payoutSchema.parse(input);
+  return getRepos().profiles.update(userId, {
+    payoutUpi: d.payoutUpi || null,
+    payoutAccountName: d.payoutAccountName || null,
+    payoutAccountNumber: d.payoutAccountNumber || null,
+    payoutIfsc: d.payoutIfsc || null,
+  });
 }
 
 export async function listUsers(): Promise<Profile[]> {

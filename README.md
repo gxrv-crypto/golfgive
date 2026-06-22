@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GolfGive 🏌️‍♂️❤️
 
-## Getting Started
+> **Play. Win. Give.** — a subscription platform that combines golf score
+> tracking, monthly draw-based prizes, and charitable giving.
+>
+> Built for the Digital Heroes trainee assignment from the supplied
+> [PRD](./prd.md), [Design System](./Design.md) and [System Design](./SystemDesign.md).
 
-First, run the development server:
+GolfGive is **component-based and scalable by design**: every domain (auth,
+subscriptions, scores, draws, charities, winners) is an isolated service sitting
+behind a repository interface, so the in-memory store used for the demo can be
+swapped for Supabase without touching UI or business logic.
+
+---
+
+## ✨ Runs instantly — zero config
+
+The app ships with a **seeded in-memory data layer** and **mock payment/email**
+adapters, so you can run the full experience (signup → subscribe → score →
+draw → win → verify → pay out) with **no external services**.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Demo credentials
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Role | Email | Password |
+|---|---|---|
+| **Subscriber** | `player@golfgive.app` | `player1234` |
+| **Admin** | `admin@golfgive.app` | `admin1234` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> New signups become subscribers and land in the **Subscribe** flow (mock
+> Razorpay checkout activates the subscription so every downstream feature works).
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🧱 Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+Browser ──▶ Next.js (App Router, RSC + Server Actions)
+              │
+   middleware │  cookie gate on /dashboard /admin /subscribe
+              ▼
+        Server Actions / Route Handlers
+              │  Zod validation · encrypted-role session · RBAC
+              ▼
+        Domain Services  (score, draw, subscription, charity, winner …)
+              │  business rules (rolling-5, prize tiers, jackpot rollover)
+              ▼
+        Repositories (interface)
+              ├── In-memory store  ← default (demo/tests)
+              └── Supabase adapter ← activated by env vars
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Layered access control mirrors SystemDesign §04:
+**cookie gate (middleware) → encrypted role (AES-256-GCM) → server-side RBAC → RLS** (in the SQL schema).
 
-## Deploy on Vercel
+### Project layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Path | Responsibility |
+|---|---|
+| `src/app/(marketing)` | Public, emotion-driven pages (home, charities, pricing, how-it-works) |
+| `src/app/(auth)` | Signup / login |
+| `src/app/dashboard` | Subscriber panel (scores, draws, charity, winnings, settings) |
+| `src/app/admin` | Admin panel (users, draws, charities, winners, reports) |
+| `src/app/subscribe` | Plan + charity + checkout flow |
+| `src/app/api` | REST surface (`scores`, `charities`, `health`) + Razorpay webhook |
+| `src/lib/services` | Domain logic (one module per bounded context) |
+| `src/lib/db` | Repository interfaces + in-memory store + seed |
+| `src/lib/actions` | Server actions (thin, validated wrappers over services) |
+| `src/lib/payments` | Razorpay integration (subscriptions + signature verification) |
+| `src/lib/auth` | Session + AES-256-GCM encrypted role |
+| `src/components/ui` | shadcn-style primitives (Radix) |
+| `supabase/schema.sql` | Production Postgres schema with RLS + rolling-5 trigger |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## ✅ Feature coverage (PRD)
+
+- **Subscriptions** — monthly/yearly plans, Razorpay subscription creation +
+  webhook signature verification, lifecycle states, real-time active check.
+- **Scores** — Stableford 1–45, one-per-date, rolling **last 5** (oldest auto-evicted),
+  reverse-chronological, add/edit/delete.
+- **Draws** — random **and** algorithmic (score-frequency weighted) engines,
+  **simulate** (no persistence) vs **publish**, jackpot rollover.
+- **Prize pool** — 40/35/25 tiers auto-sized from active subscribers, split
+  equally among winners per tier.
+- **Charity** — directory with search/filter, profiles + events, spotlight on
+  home, selection with min-10% contribution slider, independent donations.
+- **Winner verification** — proof upload, admin approve/reject, Pending → Paid.
+- **Dashboards** — full subscriber + admin panels with reports/analytics.
+- **UI/UX** — "Warm Impact" design system, dark mode, Framer Motion reveals,
+  mobile-first, `prefers-reduced-motion` respected.
+
+---
+
+## 🔌 Going live (optional integrations)
+
+Copy `.env.example` → `.env.local` and fill in any of the following. Each one is
+independent — add only what you need.
+
+- **Supabase** — create a new project, run `supabase/schema.sql`, set the URL/keys.
+  Implement the Supabase repository behind `getRepos()` in `src/lib/db/repositories.ts`.
+- **Razorpay** — set `RAZORPAY_KEY_ID/SECRET`, create plans and set
+  `RAZORPAY_PLAN_MONTHLY/YEARLY`, point the webhook at `/api/webhooks/razorpay`
+  with `RAZORPAY_WEBHOOK_SECRET`. Mock mode is used until keys are present.
+- **Resend** — set `RESEND_API_KEY` to send real transactional emails
+  (welcome, subscription, winner, payout). Otherwise emails are logged.
+- **Security** — set a 32-byte `ROLE_ENCRYPTION_KEY` in production.
+
+Check integration status any time at **`GET /api/health`**.
+
+---
+
+## 🚀 Deploy
+
+- **Vercel** — import the repo, add env vars, deploy. Edge network handles TLS,
+  CDN and load balancing (SystemDesign §10).
+- **Supabase** — new project, run the schema, enable RLS (already in the SQL).
+
+---
+
+## 🧪 Scripts
+
+```bash
+npm run dev     # local development
+npm run build   # production build (type-checked)
+npm run start   # run the production build
+npm run lint    # eslint
+```
+
+---
+
+Built with Next.js · React · Tailwind CSS v4 · Radix UI · Zod · Framer Motion.

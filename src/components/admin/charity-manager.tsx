@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Loader2, Star } from "lucide-react";
+import Image from "next/image";
+import { Plus, Pencil, Trash2, Loader2, Star, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,15 +28,28 @@ import {
   createCharityAction,
   updateCharityAction,
   deleteCharityAction,
+  uploadCharityImageAction,
 } from "@/lib/actions/charity-actions";
 import { formatCurrency } from "@/lib/format";
 import type { Charity } from "@/types";
 
 type Editing = Charity | "new" | null;
 
+const MAX_IMAGE_MB = 5;
+const ACCEPTED = ["image/png", "image/jpeg", "image/webp"];
+
 export function CharityManager({ charities }: { charities: Charity[] }) {
   const [editing, setEditing] = React.useState<Editing>(null);
   const [pending, start] = React.useTransition();
+  const [imageUrl, setImageUrl] = React.useState("");
+  const [uploading, setUploading] = React.useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  // Open the dialog and seed the image field from the target charity (if any).
+  function openEditor(target: Editing) {
+    setImageUrl(target && target !== "new" ? target.imageUrl ?? "" : "");
+    setEditing(target);
+  }
 
   function remove(id: string) {
     start(async () => {
@@ -43,6 +57,35 @@ export function CharityManager({ charities }: { charities: Charity[] }) {
       if (!res.ok) { toast.error(res.error); return; }
       toast.success("Charity deleted");
     });
+  }
+
+  function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ACCEPTED.includes(file.type)) {
+      toast.error("Upload a PNG, JPG or WEBP image");
+      return;
+    }
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      toast.error(`Image must be ${MAX_IMAGE_MB} MB or smaller`);
+      return;
+    }
+    const fd = new FormData();
+    fd.set("file", file);
+    setUploading(true);
+    (async () => {
+      const res = await uploadCharityImageAction(fd);
+      setUploading(false);
+      if (!res.ok) { toast.error(res.error); return; }
+      if (res.data?.url) {
+        setImageUrl(res.data.url);
+        toast.success("Image uploaded");
+      } else {
+        // Demo mode (no storage configured) — show a local preview only.
+        setImageUrl(URL.createObjectURL(file));
+        toast.info("Storage not configured — preview only");
+      }
+    })();
   }
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -53,7 +96,7 @@ export function CharityManager({ charities }: { charities: Charity[] }) {
       category: String(fd.get("category")),
       description: String(fd.get("description")),
       mission: String(fd.get("mission")),
-      imageUrl: String(fd.get("imageUrl")),
+      imageUrl: imageUrl.startsWith("blob:") ? "" : imageUrl,
       isFeatured: fd.get("isFeatured") === "on",
     };
     start(async () => {
@@ -73,7 +116,7 @@ export function CharityManager({ charities }: { charities: Charity[] }) {
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Charities</CardTitle>
-        <Button size="sm" className="rounded-full" onClick={() => setEditing("new")}>
+        <Button size="sm" className="rounded-full" onClick={() => openEditor("new")}>
           <Plus className="size-4" /> Add charity
         </Button>
       </CardHeader>
@@ -102,7 +145,7 @@ export function CharityManager({ charities }: { charities: Charity[] }) {
                 <TableCell className="text-right tabular-nums">{formatCurrency(c.raised)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon-sm" onClick={() => setEditing(c)} aria-label="Edit">
+                    <Button variant="ghost" size="icon-sm" onClick={() => openEditor(c)} aria-label="Edit">
                       <Pencil className="size-4" />
                     </Button>
                     <Button variant="ghost" size="icon-sm" className="text-destructive" onClick={() => remove(c.id)} disabled={pending} aria-label="Delete">
@@ -132,8 +175,47 @@ export function CharityManager({ charities }: { charities: Charity[] }) {
                 <Input id="category" name="category" defaultValue={current?.category} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input id="imageUrl" name="imageUrl" type="url" defaultValue={current?.imageUrl} />
+                <Label>Image</Label>
+                <div className="flex items-center gap-4">
+                  <div className="relative size-20 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                    {imageUrl ? (
+                      <Image
+                        src={imageUrl}
+                        alt="Charity preview"
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="grid size-full place-items-center text-muted-foreground">
+                        <ImagePlus className="size-6" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+                      {imageUrl ? "Replace image" : "Upload image"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG or WEBP · up to {MAX_IMAGE_MB} MB
+                    </p>
+                  </div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept={ACCEPTED.join(",")}
+                    className="hidden"
+                    onChange={onPickImage}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>

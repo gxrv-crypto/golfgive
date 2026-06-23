@@ -1,10 +1,11 @@
 -- ============================================================================
 -- GolfGive — Supabase Postgres schema (SystemDesign §05)
 --
--- SINGLE SOURCE OF TRUTH. This file is idempotent (safe to re-run): enums,
--- tables, columns, indexes, constraints, triggers and RLS policies all guard
--- against "already exists". Apply it with `npm run db:push` (needs
--- SUPABASE_ACCESS_TOKEN) or by pasting it into the Supabase SQL editor.
+-- SINGLE SOURCE OF TRUTH. All schema + past migrations are consolidated here.
+-- This file is idempotent (safe to re-run): enums, tables, columns, indexes,
+-- constraints, triggers and RLS policies all guard against "already exists".
+-- Apply it (and create storage buckets) with `npm run db:push` — needs
+-- SUPABASE_ACCESS_TOKEN — or by pasting this file into the Supabase SQL editor.
 -- ============================================================================
 
 -- ── Enums ───────────────────────────────────────────────────────────────────
@@ -165,12 +166,16 @@ create table if not exists api_keys (
 -- ============================================================================
 -- Row Level Security
 -- ============================================================================
-alter table profiles      enable row level security;
-alter table subscriptions enable row level security;
-alter table scores        enable row level security;
-alter table winners       enable row level security;
-alter table donations     enable row level security;
-alter table charities     enable row level security;
+alter table profiles       enable row level security;
+alter table subscriptions  enable row level security;
+alter table scores         enable row level security;
+alter table winners        enable row level security;
+alter table donations      enable row level security;
+alter table charities      enable row level security;
+alter table charity_events enable row level security;
+alter table draws          enable row level security;
+alter table prize_pools    enable row level security;
+alter table api_keys       enable row level security;
 
 create or replace function is_admin() returns boolean as $$
   select exists (
@@ -200,3 +205,43 @@ drop policy if exists "charities read" on charities;
 create policy "charities read" on charities for select using (true);
 drop policy if exists "charities write" on charities;
 create policy "charities write" on charities for all using (is_admin());
+
+-- Public-readable reference data; writes restricted to admins.
+drop policy if exists "events read" on charity_events;
+create policy "events read" on charity_events for select using (true);
+drop policy if exists "events write" on charity_events;
+create policy "events write" on charity_events for all using (is_admin());
+
+drop policy if exists "draws read" on draws;
+create policy "draws read" on draws for select using (true);
+drop policy if exists "draws write" on draws;
+create policy "draws write" on draws for all using (is_admin());
+
+drop policy if exists "pools read" on prize_pools;
+create policy "pools read" on prize_pools for select using (true);
+drop policy if exists "pools write" on prize_pools;
+create policy "pools write" on prize_pools for all using (is_admin());
+
+-- api_keys: no anon/authenticated access — admins (and service role) only.
+drop policy if exists "api_keys admin" on api_keys;
+create policy "api_keys admin" on api_keys for all using (is_admin());
+
+-- ============================================================================
+-- Grants
+--
+-- Supabase's dashboard SQL editor auto-grants the API roles, but the Management
+-- API / psql connection used by `npm run db:push` does NOT — without these the
+-- REST/JS client fails with "permission denied for table ...". RLS above still
+-- governs row visibility for anon/authenticated; service_role bypasses RLS for
+-- trusted server-side access.
+-- ============================================================================
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant all on all functions in schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+
+-- Tell PostgREST to reload its schema cache so new tables/grants are picked up.
+notify pgrst, 'reload schema';

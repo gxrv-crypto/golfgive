@@ -52,16 +52,24 @@ export async function signup(input: unknown): Promise<SignupResult> {
       },
     });
     if (error) {
+      // Surfaced directly when email confirmations are OFF.
       if (/registered|already|exists/i.test(error.message)) {
         throw new Error("An account with this email already exists");
       }
       throw new Error(error.message);
     }
+    // Anti-enumeration: with email confirmations ON, signing up an existing
+    // email returns no error but a user with an EMPTY identities array. Detect
+    // that here (before writing any profile row) and report the duplicate.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      throw new Error("An account with this email already exists");
+    }
     const userId = data.user?.id;
     if (!userId) throw new Error("Could not create your account");
 
-    // Ensure the profile row exists (service role bypasses RLS).
-    await supabaseAdmin()
+    // Ensure the profile row exists (service role bypasses RLS). Surface any
+    // write error instead of letting a missing row blow up downstream.
+    const { error: upsertError } = await supabaseAdmin()
       .from("profiles")
       .upsert(
         {
@@ -74,8 +82,28 @@ export async function signup(input: unknown): Promise<SignupResult> {
         },
         { onConflict: "id" },
       );
+    if (upsertError) throw new Error(upsertError.message);
 
-    const profile = (await repos.profiles.getById(userId))!;
+    // Re-read the row; fall back to the values we just wrote if the read is
+    // momentarily unavailable (e.g. read replica lag), so callers never get null.
+    const profile =
+      (await repos.profiles.getById(userId)) ??
+      ({
+        id: userId,
+        email,
+        name,
+        role: "subscriber",
+        charityId: null,
+        charityPct: MIN_CHARITY_PCT,
+        luckyNumbers: [],
+        avatarUrl: null,
+        payoutUpi: null,
+        payoutAccountName: null,
+        payoutAccountNumber: null,
+        payoutIfsc: null,
+        createdAt: new Date().toISOString(),
+      } satisfies Profile);
+
     // A session means the project doesn't require email confirmation.
     return { profile, confirmed: Boolean(data.session) };
   }

@@ -67,6 +67,42 @@ export async function createOrder(plan: PlanId): Promise<CreatedOrder> {
   };
 }
 
+/**
+ * Create a one-time Razorpay Order for an arbitrary donation amount (in rupees).
+ * Mirrors `createOrder` but for free-form amounts rather than plan prices.
+ */
+export async function createDonationOrder(amountRupees: number): Promise<CreatedOrder> {
+  const amount = Math.round(amountRupees * 100); // paise
+  if (!isRazorpayConfigured()) {
+    return {
+      orderId: `order_mock_${crypto.randomBytes(6).toString("hex")}`,
+      amount,
+      currency: APP.currency,
+      mock: true,
+    };
+  }
+
+  const { default: Razorpay } = await import("razorpay");
+  const client = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID!,
+    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  });
+
+  const order = await client.orders.create({
+    amount,
+    currency: APP.currency,
+    receipt: `gg_donation_${Date.now()}`,
+    notes: { type: "donation" },
+  });
+
+  return {
+    orderId: order.id,
+    amount: Number(order.amount),
+    currency: order.currency,
+    mock: false,
+  };
+}
+
 /** Verify the Order checkout handshake (order_id|payment_id). */
 export function verifyOrderSignature(params: {
   razorpay_order_id: string;

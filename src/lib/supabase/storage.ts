@@ -12,10 +12,42 @@ import { isSupabaseConfigured } from "@/lib/config";
 
 export const PROOF_BUCKET = "winner-proofs";
 export const AVATAR_BUCKET = "avatars";
+export const CHARITY_BUCKET = "charity-media";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp", "application/pdf"];
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+/** Max upload size for a charity image (overridable via env). */
+export const CHARITY_IMAGE_MAX_BYTES =
+  Number(process.env.CHARITY_IMAGE_MAX_MB ?? 5) * 1024 * 1024;
+
+/**
+ * Upload a charity image to the public `charity-media` bucket.
+ * Returns a cache-busted public URL, or null in demo mode (no storage).
+ */
+export async function uploadCharityImage(file: File): Promise<string | null> {
+  if (!file || file.size === 0) throw new Error("Please choose an image");
+  if (file.size > CHARITY_IMAGE_MAX_BYTES) {
+    const mb = Math.round(CHARITY_IMAGE_MAX_BYTES / (1024 * 1024));
+    throw new Error(`Image must be ${mb} MB or smaller`);
+  }
+  if (!IMAGE_TYPES.includes(file.type)) throw new Error("Upload a PNG, JPG or WEBP");
+
+  if (!isSupabaseConfigured()) return null; // demo mode — no real storage
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await supabaseAdmin()
+    .storage.from(CHARITY_BUCKET)
+    .upload(path, bytes, { contentType: file.type, upsert: true });
+  if (error) throw new Error(error.message);
+
+  const { data } = supabaseAdmin().storage.from(CHARITY_BUCKET).getPublicUrl(path);
+  return `${data.publicUrl}?v=${Date.now()}`;
+}
 
 /**
  * Upload a user avatar to the public `avatars` bucket.

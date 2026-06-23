@@ -6,8 +6,23 @@ import {
   updateCharity,
   deleteCharity,
 } from "@/lib/services/charity-service";
+import { uploadCharityImage } from "@/lib/supabase/storage";
 import { type ActionResult, toError } from "@/lib/actions/result";
 import type { CharityUpsertInput } from "@/lib/validations";
+
+export async function uploadCharityImageAction(
+  formData: FormData,
+): Promise<ActionResult<{ url: string | null }>> {
+  try {
+    await requireRole("admin");
+    const file = formData.get("file") as File | null;
+    if (!file) throw new Error("Please choose an image");
+    const url = await uploadCharityImage(file);
+    return { ok: true, data: { url } };
+  } catch (err) {
+    return toError(err);
+  }
+}
 
 export async function createCharityAction(input: CharityUpsertInput): Promise<ActionResult> {
   try {

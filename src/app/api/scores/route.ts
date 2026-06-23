@@ -6,10 +6,13 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { listScores, addScore } from "@/lib/services/score-service";
 import { toError } from "@/lib/actions/result";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const limited = await enforceRateLimit(req, "scores:get");
+  if (limited) return limited;
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const scores = await listScores(user.id);
@@ -17,6 +20,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const limited = await enforceRateLimit(req, "scores:post");
+  if (limited) return limited;
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {

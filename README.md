@@ -107,19 +107,20 @@ in-memory store — same code, zero config.
 Setup:
 
 ```bash
-# 1. Create a new Supabase project, then run the schema in its SQL editor:
-#    supabase/schema.sql   (includes payout columns for fresh projects)
-# 2. Put the URL + anon + service-role keys in .env.local
-# 3. If you created the project earlier, apply pending migrations:
-#    paste supabase/migrations/*.sql into the SQL editor, OR
-#    add SUPABASE_ACCESS_TOKEN to .env.local and run:
-npm run migrate
-# 4. Create an admin and seed demo data:
+# 1. Create a new Supabase project and copy the URL + anon + service-role keys
+#    (and a personal access token, SUPABASE_ACCESS_TOKEN) into .env.local
+# 2. Push the schema AND create storage buckets in one command:
+npm run db:push          # applies supabase/schema.sql + creates buckets
+#    (without SUPABASE_ACCESS_TOKEN it prints the SQL to paste into the editor)
+# 3. Create an admin and seed demo data:
 npm run create:admin     # admin@golfgive.app / admin1234
 npm run seed             # charities + player@golfgive.app / player1234 + a draw
 ```
 
-Both scripts use the service-role key and Node's `--env-file=.env.local`.
+> `supabase/schema.sql` is the **single source of truth** — schema and all past
+> migrations are consolidated into that one idempotent file.
+
+All scripts use the service-role key and Node's `--env-file=.env.local`.
 The data repository uses the service-role client on the trusted server; access
 control is enforced in the app layer (action/layout guards), with **RLS** in the
 schema as defence-in-depth.
@@ -132,9 +133,39 @@ Fill in any of these in `.env.local`. Each is independent.
   with `RAZORPAY_WEBHOOK_SECRET`. Mock mode is used until keys are present.
 - **Resend** — set `RESEND_API_KEY` to send real transactional emails
   (welcome, subscription, winner, payout). Otherwise emails are logged.
+- **Upstash Redis** — set `UPSTASH_REDIS_REST_URL/TOKEN` to share API rate-limit
+  counters across instances. Otherwise an in-memory limiter is used.
 - **Security** — set a 32-byte `ROLE_ENCRYPTION_KEY` in production.
 
 Check integration status any time at **`GET /api/health`**.
+
+### Rate limiting
+
+Every `/api/*` route is protected by a fixed-window limiter (`src/lib/rate-limit.ts`),
+tuned entirely from env (defaults shown):
+
+| Var | Default | Purpose |
+|---|---|---|
+| `RATE_LIMIT_ENABLED` | `true` | Master on/off switch |
+| `RATE_LIMIT_MAX` | `60` | Requests per window, per IP + endpoint |
+| `RATE_LIMIT_WINDOW` | `60` | Window length (seconds) |
+
+Over-limit callers get **HTTP 429** with `Retry-After` + `X-RateLimit-*` headers.
+
+### Uploads
+
+Avatars and charity images upload to **Supabase Storage** (public `avatars` /
+`charity-media` buckets) via Server Actions. Because Server Actions cap request
+bodies at 1 MB by default, the limit is raised to `SERVER_ACTIONS_BODY_SIZE_LIMIT`
+(default `6mb`); charity image size is capped by `CHARITY_IMAGE_MAX_MB` (default `5`).
+
+---
+
+## 📚 Documentation
+
+- [API.md](./API.md) — REST endpoints, auth, rate limits, payloads.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — layers, data model, request lifecycle.
+- In-app docs: visit **`/docs`** for a browsable Setup / API / Architecture guide.
 
 ---
 
@@ -149,10 +180,13 @@ Check integration status any time at **`GET /api/health`**.
 ## 🧪 Scripts
 
 ```bash
-npm run dev     # local development
-npm run build   # production build (type-checked)
-npm run start   # run the production build
-npm run lint    # eslint
+npm run dev          # local development
+npm run build        # production build (type-checked)
+npm run start        # run the production build
+npm run lint         # eslint
+npm run db:push      # apply supabase/schema.sql + create storage buckets
+npm run create:admin # provision the admin account
+npm run seed         # seed charities + demo subscriber + a draw
 ```
 
 ---

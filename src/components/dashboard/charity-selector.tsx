@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Loader2, HandCoins } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,8 +19,18 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { MIN_CHARITY_PCT } from "@/lib/config";
-import { selectCharityAction, donateAction } from "@/lib/actions/profile-actions";
+import { MIN_CHARITY_PCT, APP } from "@/lib/config";
+import {
+  selectCharityAction,
+  startDonationAction,
+  verifyDonationAction,
+} from "@/lib/actions/profile-actions";
+import {
+  loadRazorpay,
+  RAZORPAY_BACKDROP,
+  RAZORPAY_THEME_COLOR,
+  type RazorpayResponse,
+} from "@/lib/razorpay-checkout";
 import type { Charity } from "@/types";
 
 export function CharitySelector({
@@ -110,21 +121,81 @@ export function CharitySelector({
 }
 
 function DonateDialog({ charities }: { charities: Charity[] }) {
+  const router = useRouter();
   const [pending, start] = React.useTransition();
   const [open, setOpen] = React.useState(false);
+
+  function finish() {
+    toast.success("Thank you for your donation!");
+    setOpen(false);
+    router.refresh();
+  }
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const input = {
-      charityId: String(fd.get("charityId")),
-      amount: Number(fd.get("amount")),
-    };
+    const charityId = String(fd.get("charityId"));
+    const amount = Number(fd.get("amount"));
+    if (!charityId) return toast.error("Choose a charity");
+    if (!amount || amount < 1) return toast.error("Enter a valid amount");
+
     start(async () => {
-      const res = await donateAction(input);
+      const res = await startDonationAction({ charityId, amount });
       if (!res.ok) { toast.error(res.error); return; }
-      toast.success("Thank you for your donation!");
-      setOpen(false);
+      const data = res.data!;
+
+      // Mock mode (no live keys) — donation already recorded server-side.
+      if (data.mock) {
+        finish();
+        return;
+      }
+
+      // Real Razorpay Checkout.
+      const loaded = await loadRazorpay();
+      if (!loaded || !window.Razorpay) {
+        toast.error("Couldn't load the payment gateway. Check your connection.");
+        return;
+      }
+
+      const charity = charities.find((c) => c.id === charityId);
+      const rzp = new window.Razorpay({
+        key: data.keyId,
+        order_id: data.orderId,
+        amount: data.amount,
+        currency: data.currency,
+        name: APP.name,
+        description: `Donation${charity ? ` · ${charity.name}` : ""}`,
+        prefill: { name: data.name, email: data.email },
+        theme: { color: RAZORPAY_THEME_COLOR, backdrop_color: RAZORPAY_BACKDROP },
+        handler: (response: RazorpayResponse) => {
+          start(async () => {
+            const v = await verifyDonationAction({
+              charityId,
+              amount,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            if (!v.ok) { toast.error(v.error); return; }
+            finish();
+          });
+        },
+        modal: { ondismiss: () => toast.info("Donation cancelled") },
+      });
+
+      rzp.on("payment.failed", (resp: unknown) => {
+        const desc =
+          (resp as { error?: { description?: string } })?.error?.description ??
+          "Payment failed. Please try again.";
+        toast.error(desc);
+      });
+
+      try {
+        rzp.open();
+      } catch (err) {
+        console.error("[razorpay] open failed", err);
+        toast.error("Could not open the payment window.");
+      }
     });
   }
 
@@ -162,7 +233,7 @@ function DonateDialog({ charities }: { charities: Charity[] }) {
               <Button type="button" variant="outline">Cancel</Button>
             </DialogClose>
             <Button type="submit" disabled={pending}>
-              {pending && <Loader2 className="size-4 animate-spin" />} Donate
+              {pending && <Loader2 className="size-4 animate-spin" />} Donate with Razorpay
             </Button>
           </DialogFooter>
         </form>

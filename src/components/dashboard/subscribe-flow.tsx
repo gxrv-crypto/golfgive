@@ -15,35 +15,13 @@ import {
   startSubscriptionAction,
   verifySubscriptionAction,
 } from "@/lib/actions/subscription-actions";
+import {
+  loadRazorpay,
+  RAZORPAY_BACKDROP,
+  RAZORPAY_THEME_COLOR,
+  type RazorpayResponse,
+} from "@/lib/razorpay-checkout";
 import type { Charity } from "@/types";
-
-/** Razorpay Checkout is injected at runtime. */
-interface RazorpayCheckout {
-  open: () => void;
-  on: (event: string, handler: (resp: unknown) => void) => void;
-}
-interface RazorpayResponse {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
-}
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => RazorpayCheckout;
-  }
-}
-
-function loadRazorpay(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") return resolve(false);
-    if (window.Razorpay) return resolve(true);
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
 
 export function SubscribeFlow({ charities }: { charities: Charity[] }) {
   return (
@@ -103,7 +81,9 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
         name: APP.name,
         description: `${PLANS[plan].name} subscription`,
         prefill: { name: data.name, email: data.email },
-        theme: { color: "#0d9488" },
+        // backdrop_color dims the page behind the modal instead of a solid
+        // white overlay, so the page background shows through (light & dark).
+        theme: { color: RAZORPAY_THEME_COLOR, backdrop_color: RAZORPAY_BACKDROP },
         handler: (response: RazorpayResponse) => {
           start(async () => {
             const v = await verifySubscriptionAction({
@@ -157,7 +137,7 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
                   className={cn(
                     "rounded-xl border p-5 text-left transition-all",
                     active
-                      ? "animate-gradient border-transparent bg-gradient-to-br from-primary via-secondary to-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      ? "border-primary ring-1 ring-primary shadow-sm"
                       : "hover:border-primary/40",
                   )}
                 >
@@ -167,12 +147,7 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
                   </div>
                   <p className="mt-2 font-display text-2xl font-bold">
                     {formatCurrency(p.price)}
-                    <span
-                      className={cn(
-                        "text-sm font-normal",
-                        active ? "text-primary-foreground/80" : "text-muted-foreground",
-                      )}
-                    >
+                    <span className="text-sm font-normal text-muted-foreground">
                       /{p.interval}
                     </span>
                   </p>
@@ -196,14 +171,14 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
                   className={cn(
                     "flex items-center gap-3 rounded-xl border p-3 text-left transition-all",
                     active
-                      ? "animate-gradient border-transparent bg-gradient-to-br from-primary via-secondary to-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      ? "border-primary ring-1 ring-primary shadow-sm"
                       : "hover:border-primary/40",
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={c.imageUrl} alt={c.name} className="size-11 shrink-0 rounded-lg object-cover" />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.name}</span>
-                  {active && <Check className="size-4 shrink-0" />}
+                  {active && <Check className="size-4 shrink-0 text-primary" />}
                 </button>
               );
             })}

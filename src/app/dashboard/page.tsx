@@ -162,18 +162,14 @@ export default async function DashboardOverview() {
       {draw && (
         <div
           className={cn(
-            // Mobile: pinned to the bottom with margin. Desktop: inline.
-            "fixed inset-x-0 bottom-0 z-30 p-4",
+            // Mobile: pinned to the bottom with breathing room. Desktop: inline.
+            "fixed inset-x-0 bottom-0 z-30 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]",
             "md:static md:inset-x-auto md:bottom-auto md:z-auto md:p-0",
           )}
         >
           <div className="relative mx-auto max-w-6xl">
-            {/* Glow */}
-            {/* <div
-              aria-hidden
-              className="pointer-events-none absolute -inset-1 rounded-3xl bg-gradient-to-r from-primary via-secondary to-accent opacity-40 blur-xl animate-gradient"
-            /> */}
-            <Card className="relative overflow-hidden border-primary/30 bg-card  shadow-primary/20">
+         
+            <Card className="relative overflow-hidden border-primary/40 bg-card ">
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 bg-gradient-to-br from-secondary/15 to-primary/15"

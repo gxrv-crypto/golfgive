@@ -11,6 +11,7 @@ const links = [
   { href: "/charities", label: "Charities" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/docs", label: "Docs" },
 ];
 
 export function Navbar({ user }: { user: SessionUser | null }) {

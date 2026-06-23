@@ -5,6 +5,8 @@
 >
 > Built for the Digital Heroes trainee assignment from the supplied
 > [PRD](./prd.md), [Design System](./Design.md) and [System Design](./SystemDesign.md).
+>
+> **Repository:** https://github.com/gxrv-crypto/golfgive
 
 GolfGive is **component-based and scalable by design**: every domain (auth,
 subscriptions, scores, draws, charities, winners) is an isolated service sitting
@@ -192,3 +194,14 @@ npm run seed         # seed charities + demo subscriber + a draw
 ---
 
 Built with Next.js · React · Tailwind CSS v4 · Radix UI · Zod · Framer Motion.
+
+---
+
+## 🙋 Submitted by
+
+**Gaurav N. Narnaware** — Full Stack Developer
+Nagpur, Maharashtra, India
+
+- ✉️ [gxurav.work@gmail.com](mailto:gxurav.work@gmail.com)
+- 📞 +91 77963 05801
+- 🐙 [github.com/gxrv-crypto/golfgive](https://github.com/gxrv-crypto/golfgive)

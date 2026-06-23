@@ -12,6 +12,11 @@ import {
   Code2,
   Layers,
   BookOpen,
+  ExternalLink,
+  Mail,
+  Phone,
+  MapPin,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +98,17 @@ const SECTIONS: Section[] = [
           <Link href="/docs#architecture" className="text-primary underline-offset-4 hover:underline">Architecture</Link>.
           For the full markdown, see <Code>README.md</Code>, <Code>API.md</Code> and{" "}
           <Code>ARCHITECTURE.md</Code> in the repository.
+        </p>
+        <p>
+          Source code:{" "}
+          <a
+            href="https://github.com/gxrv-crypto/golfgive"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"
+          >
+            <ExternalLink className="size-4" /> github.com/gxrv-crypto/golfgive
+          </a>
         </p>
       </Prose>
     ),
@@ -305,6 +321,50 @@ npm run seed          # charities + demo subscriber + a published draw`}</CodeBl
           swaps for Supabase with no UI or logic changes. Full diagrams and the
           request lifecycle are in <Code>ARCHITECTURE.md</Code>.
         </p>
+      </Prose>
+    ),
+  },
+  {
+    id: "submitted-by",
+    label: "Submitted by",
+    icon: User,
+    body: (
+      <Prose>
+        <p>
+          Built and submitted as part of the Digital Heroes trainee assignment.
+        </p>
+        <div className="rounded-xl border bg-muted/40 p-5">
+          <p className="text-lg font-semibold text-foreground">Gaurav N. Narnaware</p>
+          <p className="text-sm text-muted-foreground">Full Stack Developer</p>
+          <ul className="mt-4 space-y-2 text-sm">
+            <li className="flex items-center gap-2.5">
+              <MapPin className="size-4 shrink-0 text-primary" /> Nagpur, Maharashtra, India
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Mail className="size-4 shrink-0 text-primary" />
+              <a
+                href="mailto:gxurav.work@gmail.com"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                gxurav.work@gmail.com
+              </a>
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Phone className="size-4 shrink-0 text-primary" /> +91 77963 05801
+            </li>
+            <li className="flex items-center gap-2.5">
+              <ExternalLink className="size-4 shrink-0 text-primary" />
+              <a
+                href="https://github.com/gxrv-crypto/golfgive"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                github.com/gxrv-crypto/golfgive
+              </a>
+            </li>
+          </ul>
+        </div>
       </Prose>
     ),
   },

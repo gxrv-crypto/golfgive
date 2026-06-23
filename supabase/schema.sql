@@ -1,18 +1,21 @@
 -- ============================================================================
 -- GolfGive — Supabase Postgres schema (SystemDesign §05)
--- Run in the Supabase SQL editor of a NEW project. RLS enabled everywhere.
--- The in-memory repository mirrors this shape, so swapping to Supabase is a
--- drop-in change behind getRepos().
+--
+-- SINGLE SOURCE OF TRUTH. This file is idempotent (safe to re-run): enums,
+-- tables, columns, indexes, constraints, triggers and RLS policies all guard
+-- against "already exists". Apply it with `npm run db:push` (needs
+-- SUPABASE_ACCESS_TOKEN) or by pasting it into the Supabase SQL editor.
 -- ============================================================================
 
-create type user_role as enum ('public', 'subscriber', 'admin');
-create type sub_status as enum ('active', 'cancelled', 'lapsed', 'pending');
-create type draw_logic as enum ('random', 'algorithmic');
-create type draw_status as enum ('draft', 'simulated', 'published');
-create type winner_status as enum ('pending', 'approved', 'rejected', 'paid');
+-- ── Enums ───────────────────────────────────────────────────────────────────
+do $$ begin create type user_role as enum ('public', 'subscriber', 'admin'); exception when duplicate_object then null; end $$;
+do $$ begin create type sub_status as enum ('active', 'cancelled', 'lapsed', 'pending'); exception when duplicate_object then null; end $$;
+do $$ begin create type draw_logic as enum ('random', 'algorithmic'); exception when duplicate_object then null; end $$;
+do $$ begin create type draw_status as enum ('draft', 'simulated', 'published'); exception when duplicate_object then null; end $$;
+do $$ begin create type winner_status as enum ('pending', 'approved', 'rejected', 'paid'); exception when duplicate_object then null; end $$;
 
--- Profiles (1:1 with auth.users) -------------------------------------------------
-create table profiles (
+-- ── Profiles (1:1 with auth.users) ───────────────────────────────────────────
+create table if not exists profiles (
   id uuid primary key references auth.users on delete cascade,
   email text unique not null,
   name text not null,
@@ -20,16 +23,22 @@ create table profiles (
   charity_id uuid,
   charity_pct int not null default 10 check (charity_pct between 10 and 100),
   lucky_numbers int[] not null default '{}',
-  -- Payout details for claiming winnings (set by the winner).
+  avatar_url text,
   payout_upi text,
   payout_account_name text,
   payout_account_number text,
   payout_ifsc text,
   created_at timestamptz not null default now()
 );
+-- Columns added over time (safe on existing installs).
+alter table profiles add column if not exists avatar_url text;
+alter table profiles add column if not exists payout_upi text;
+alter table profiles add column if not exists payout_account_name text;
+alter table profiles add column if not exists payout_account_number text;
+alter table profiles add column if not exists payout_ifsc text;
 
--- Charities ---------------------------------------------------------------------
-create table charities (
+-- ── Charities ────────────────────────────────────────────────────────────────
+create table if not exists charities (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   category text not null,
@@ -42,7 +51,7 @@ create table charities (
   created_at timestamptz not null default now()
 );
 
-create table charity_events (
+create table if not exists charity_events (
   id uuid primary key default gen_random_uuid(),
   charity_id uuid not null references charities on delete cascade,
   title text not null,
@@ -50,12 +59,13 @@ create table charity_events (
   location text not null
 );
 
-alter table profiles
-  add constraint profiles_charity_fk
-  foreign key (charity_id) references charities on delete set null;
+do $$ begin
+  alter table profiles add constraint profiles_charity_fk
+    foreign key (charity_id) references charities on delete set null;
+exception when duplicate_object then null; end $$;
 
--- Subscriptions -----------------------------------------------------------------
-create table subscriptions (
+-- ── Subscriptions ────────────────────────────────────────────────────────────
+create table if not exists subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles on delete cascade,
   plan text not null check (plan in ('monthly', 'yearly')),
@@ -66,10 +76,10 @@ create table subscriptions (
   current_period_end timestamptz,
   created_at timestamptz not null default now()
 );
-create index on subscriptions (user_id, status);
+create index if not exists subscriptions_user_status_idx on subscriptions (user_id, status);
 
--- Scores: 1 per date, Stableford range enforced at DB level ---------------------
-create table scores (
+-- ── Scores: 1 per date, Stableford range at DB level, rolling-5 via trigger ───
+create table if not exists scores (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles on delete cascade,
   value int not null check (value between 1 and 45),
@@ -77,9 +87,8 @@ create table scores (
   created_at timestamptz not null default now(),
   unique (user_id, played_on)
 );
-create index on scores (user_id, played_on desc);
+create index if not exists scores_user_played_idx on scores (user_id, played_on desc);
 
--- Rolling last-5: trim oldest beyond 5 on insert -------------------------------
 create or replace function trim_scores() returns trigger as $$
 begin
   delete from scores
@@ -93,12 +102,13 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists trg_trim_scores on scores;
 create trigger trg_trim_scores
 after insert on scores
 for each row execute function trim_scores();
 
--- Draws & prizes ----------------------------------------------------------------
-create table draws (
+-- ── Draws & prizes ────────────────────────────────────────────────────────────
+create table if not exists draws (
   id uuid primary key default gen_random_uuid(),
   period text not null unique,                  -- 'YYYY-MM'
   logic draw_logic not null default 'random',
@@ -110,7 +120,7 @@ create table draws (
   created_at timestamptz not null default now()
 );
 
-create table prize_pools (
+create table if not exists prize_pools (
   id uuid primary key default gen_random_uuid(),
   draw_id uuid not null references draws on delete cascade,
   tier text not null,
@@ -119,7 +129,7 @@ create table prize_pools (
   rollover boolean not null default false
 );
 
-create table winners (
+create table if not exists winners (
   id uuid primary key default gen_random_uuid(),
   draw_id uuid not null references draws on delete cascade,
   user_id uuid not null references profiles on delete cascade,
@@ -132,9 +142,9 @@ create table winners (
   paid_at timestamptz,
   created_at timestamptz not null default now()
 );
-create index on winners (draw_id, status);
+create index if not exists winners_draw_status_idx on winners (draw_id, status);
 
-create table donations (
+create table if not exists donations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles on delete cascade,
   charity_id uuid not null references charities on delete cascade,
@@ -142,7 +152,7 @@ create table donations (
   created_at timestamptz not null default now()
 );
 
-create table api_keys (
+create table if not exists api_keys (
   id uuid primary key default gen_random_uuid(),
   hashed_key text unique not null,
   label text not null,
@@ -169,15 +179,24 @@ create or replace function is_admin() returns boolean as $$
 $$ language sql security definer;
 
 -- Owners see their own rows; admins see everything.
-create policy "own profile"        on profiles      for select using (id = auth.uid() or is_admin());
-create policy "update own profile" on profiles      for update using (id = auth.uid() or is_admin());
+drop policy if exists "own profile" on profiles;
+create policy "own profile" on profiles for select using (id = auth.uid() or is_admin());
+drop policy if exists "update own profile" on profiles;
+create policy "update own profile" on profiles for update using (id = auth.uid() or is_admin());
 
-create policy "own subs"           on subscriptions for all    using (user_id = auth.uid() or is_admin());
-create policy "own scores"         on scores        for all    using (user_id = auth.uid() or is_admin());
-create policy "own winnings"       on winners       for select using (user_id = auth.uid() or is_admin());
-create policy "admin winners"      on winners       for all    using (is_admin());
-create policy "own donations"      on donations     for all    using (user_id = auth.uid() or is_admin());
+drop policy if exists "own subs" on subscriptions;
+create policy "own subs" on subscriptions for all using (user_id = auth.uid() or is_admin());
+drop policy if exists "own scores" on scores;
+create policy "own scores" on scores for all using (user_id = auth.uid() or is_admin());
+drop policy if exists "own winnings" on winners;
+create policy "own winnings" on winners for select using (user_id = auth.uid() or is_admin());
+drop policy if exists "admin winners" on winners;
+create policy "admin winners" on winners for all using (is_admin());
+drop policy if exists "own donations" on donations;
+create policy "own donations" on donations for all using (user_id = auth.uid() or is_admin());
 
 -- Charities are public to read, admin to write.
-create policy "charities read"     on charities     for select using (true);
-create policy "charities write"    on charities     for all    using (is_admin());
+drop policy if exists "charities read" on charities;
+create policy "charities read" on charities for select using (true);
+drop policy if exists "charities write" on charities;
+create policy "charities write" on charities for all using (is_admin());

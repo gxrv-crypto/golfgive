@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface HeroSliderProps {
@@ -22,13 +23,22 @@ export function HeroSlider({ images, interval = 6000 }: HeroSliderProps) {
       <AnimatePresence mode="popLayout">
         <motion.div
           key={index}
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${images[index]})` }}
+          className="absolute inset-0"
           initial={{ opacity: 0, scale: 1.08 }}
           animate={{ opacity: 0.35, scale: 1.02 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1.8, ease: [0.25, 1, 0.5, 1] }}
-        />
+        >
+          <Image
+            src={images[index]}
+            alt=""
+            aria-hidden
+            fill
+            priority={index === 0}
+            sizes="100vw"
+            className="object-cover"
+          />
+        </motion.div>
       </AnimatePresence>
 
       {/* Theme-Aware Cinematic Overlays */}

@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
 import { addScore, editScore, deleteScore } from "@/lib/services/score-service";
+import { requireActiveSubscription } from "@/lib/services/subscription-service";
 import { type ActionResult, toError } from "@/lib/actions/result";
 
 export async function addScoreAction(input: {
@@ -10,6 +11,7 @@ export async function addScoreAction(input: {
 }): Promise<ActionResult> {
   try {
     const user = await requireRole("subscriber", "admin");
+    await requireActiveSubscription(user);
     await addScore(user.id, input);
     revalidatePath("/dashboard/scores");
     revalidatePath("/dashboard");
@@ -25,6 +27,7 @@ export async function editScoreAction(
 ): Promise<ActionResult> {
   try {
     const user = await requireRole("subscriber", "admin");
+    await requireActiveSubscription(user);
     await editScore(user.id, scoreId, input);
     revalidatePath("/dashboard/scores");
     return { ok: true };
@@ -36,6 +39,7 @@ export async function editScoreAction(
 export async function deleteScoreAction(scoreId: string): Promise<ActionResult> {
   try {
     const user = await requireRole("subscriber", "admin");
+    await requireActiveSubscription(user);
     await deleteScore(user.id, scoreId);
     revalidatePath("/dashboard/scores");
     return { ok: true };

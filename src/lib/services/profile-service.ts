@@ -21,6 +21,10 @@ export async function updateName(userId: string, name: string): Promise<Profile>
   return getRepos().profiles.update(userId, { name: name.trim() });
 }
 
+export async function setAvatar(userId: string, avatarUrl: string | null): Promise<Profile> {
+  return getRepos().profiles.update(userId, { avatarUrl });
+}
+
 export async function setPayoutDetails(userId: string, input: unknown): Promise<Profile> {
   const d = payoutSchema.parse(input);
   return getRepos().profiles.update(userId, {

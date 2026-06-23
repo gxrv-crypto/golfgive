@@ -28,6 +28,7 @@ const toProfile = (r: any): Profile => ({
   charityId: r.charity_id,
   charityPct: r.charity_pct,
   luckyNumbers: r.lucky_numbers ?? [],
+  avatarUrl: r.avatar_url ?? null,
   payoutUpi: r.payout_upi ?? null,
   payoutAccountName: r.payout_account_name ?? null,
   payoutAccountNumber: r.payout_account_number ?? null,
@@ -166,6 +167,7 @@ export const supabaseRepos: Repositories = {
       if (patch.charityId !== undefined) row.charity_id = patch.charityId;
       if (patch.charityPct !== undefined) row.charity_pct = patch.charityPct;
       if (patch.luckyNumbers !== undefined) row.lucky_numbers = patch.luckyNumbers;
+      if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
       if (patch.payoutUpi !== undefined) row.payout_upi = patch.payoutUpi;
       if (patch.payoutAccountName !== undefined) row.payout_account_name = patch.payoutAccountName;
       if (patch.payoutAccountNumber !== undefined) row.payout_account_number = patch.payoutAccountNumber;

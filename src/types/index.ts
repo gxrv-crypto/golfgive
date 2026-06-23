@@ -15,6 +15,8 @@ export interface Profile {
   charityPct: number;
   /** Lucky numbers the subscriber plays in draws (1..45, length 5). */
   luckyNumbers: number[];
+  /** Public avatar URL (Supabase Storage `avatars` bucket). */
+  avatarUrl?: string | null;
   /** Payout details for claiming winnings (set by the winner). */
   payoutUpi?: string | null;
   payoutAccountName?: string | null;
@@ -78,6 +80,8 @@ export interface CharityEvent {
 }
 
 export type DrawLogic = "random" | "algorithmic";
+/** For algorithmic draws: bias toward most- or least-frequently played scores. */
+export type DrawWeighting = "most" | "least";
 export type DrawStatus = "draft" | "simulated" | "published";
 
 export interface Draw {

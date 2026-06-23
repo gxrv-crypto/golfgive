@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Search, Filter, FilterIcon } from "lucide-react";
+import { Search, FilterIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,

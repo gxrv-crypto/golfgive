@@ -29,9 +29,9 @@ export function Footer() {
         <FooterCol
           title="Legal"
           links={[
-            { href: "#", label: "Privacy" },
-            { href: "#", label: "Terms" },
-            { href: "#", label: "Responsible play" },
+            { href: "/privacy", label: "Privacy" },
+            { href: "/terms", label: "Terms" },
+            { href: "/responsible-play", label: "Responsible play" },
           ]}
         />
       </div>

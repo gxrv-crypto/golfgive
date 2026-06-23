@@ -12,6 +12,8 @@ export function toError(err: unknown): { ok: false; error: string } {
   if (err instanceof Error) {
     if (err.message === "UNAUTHORIZED") return { ok: false, error: "Please log in" };
     if (err.message === "FORBIDDEN") return { ok: false, error: "Not allowed" };
+    if (err.message === "SUBSCRIPTION_REQUIRED")
+      return { ok: false, error: "An active subscription is required for this feature" };
     return { ok: false, error: err.message };
   }
   // Non-Error throws (e.g. Razorpay/Supabase reject with plain objects).

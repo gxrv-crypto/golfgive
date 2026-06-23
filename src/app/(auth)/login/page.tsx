@@ -3,8 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, ShieldAlert } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Loader2, Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,17 +12,28 @@ import { loginAction } from "@/lib/actions/auth-actions";
 export default function LoginPage() {
   const router = useRouter();
   const [pending, start] = React.useTransition();
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+
+  function autofill(kind: "subscriber" | "admin") {
+    if (kind === "subscriber") {
+      setEmail("player@golfgive.app");
+      setPassword("player1234");
+    } else {
+      setEmail("admin@golfgive.app");
+      setPassword("admin1234");
+    }
+    toast.message(`Filled ${kind} credentials`, { description: "Hit Log in to continue." });
+  }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const input = {
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    };
     start(async () => {
-      const res = await loginAction(input);
-      if (!res.ok) { toast.error(res.error); return; }
+      const res = await loginAction({ email, password });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
       toast.success("Welcome back!");
       router.push(res.data?.role === "admin" ? "/admin" : "/dashboard");
       router.refresh();
@@ -31,56 +41,83 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="border border-border/40 bg-background/70 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden">
-      <CardHeader className="space-y-1.5 p-6 md:p-8 pb-4">
-        <CardTitle className="font-display text-2xl font-extrabold text-foreground">Welcome back</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">Log in to track scores and enter the draw.</CardDescription>
-      </CardHeader>
-      
-      <CardContent className="p-6 md:p-8 pt-0 space-y-6">
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Email Address</Label>
-            <Input id="email" name="email" type="email" required placeholder="you@example.com" className="rounded-xl h-11 border-border/60 bg-background/50 focus:bg-background transition-all" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Password</Label>
-            </div>
-            <Input id="password" name="password" type="password" required placeholder="••••••••" className="rounded-xl h-11 border-border/60 bg-background/50 focus:bg-background transition-all" />
-          </div>
-          <Button 
-            type="submit" 
-            className="w-full rounded-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-md transition-all hover:scale-101 hover:shadow-lg gap-1.5" 
-            disabled={pending}
-          >
-            {pending && <Loader2 className="size-4 animate-spin" />} Log in
-          </Button>
-        </form>
+    <div>
+      <h1 className="font-display text-3xl font-extrabold tracking-tight">Welcome back</h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">
+        Log in to track scores and enter the draw.
+      </p>
 
-        {/* Beautiful Demo credentials block */}
-        <div className="rounded-2xl border border-warning/20 bg-warning/5 dark:bg-warning/10 p-4 text-xs text-warning-foreground space-y-2">
-          <div className="flex items-center gap-1.5 font-bold">
-            <ShieldAlert className="size-4 shrink-0 text-warning" />
-            <span>Demo access credentials</span>
-          </div>
-          <div className="space-y-1 text-[11px] text-muted-foreground">
-            <p>
-              <strong className="text-foreground font-medium">Subscriber:</strong> player@golfgive.app / player1234
-            </p>
-            <p>
-              <strong className="text-foreground font-medium">Administrator:</strong> admin@golfgive.app / admin1234
-            </p>
-          </div>
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email address</Label>
+          <Input
+            id="email"
+            type="email"
+            required
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-11"
+          />
         </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <Input
+            id="password"
+            type="password"
+            required
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="h-11"
+          />
+        </div>
+        <Button type="submit" disabled={pending} className="h-11 w-full rounded-full">
+          {pending && <Loader2 className="size-4 animate-spin" />} Log in
+        </Button>
+      </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          New here?{" "}
-          <Link href="/signup" className="font-semibold text-primary hover:underline">
-            Create an account
-          </Link>
+      {/* Demo credential autofill */}
+      <div className="mt-6 rounded-2xl border border-dashed border-border p-4">
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Wand2 className="size-3.5" /> Demo access — autofill credentials
         </p>
-      </CardContent>
-    </Card>
+        <div className="mt-3 flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => autofill("subscriber")}
+          >
+            Subscriber
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => autofill("admin")}
+          >
+            Admin
+          </Button>
+        </div>
+      </div>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        New here?{" "}
+        <Link href="/signup" className="font-semibold text-primary hover:underline">
+          Create an account
+        </Link>
+      </p>
+    </div>
   );
 }

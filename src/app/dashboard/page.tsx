@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { requireUser } from "@/lib/auth/session";
 import { getProfile } from "@/lib/services/profile-service";
@@ -37,7 +38,7 @@ export default async function DashboardOverview() {
   const pendingPayouts = winnings.filter((w) => w.status !== "paid").length;
 
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", draw && "max-md:pb-36")}>
       <div>
         <h2 className="font-display text-2xl font-bold">Hi {user.name.split(" ")[0]} 👋</h2>
         <p className="text-muted-foreground">Here&apos;s your impact at a glance.</p>
@@ -159,26 +160,45 @@ export default async function DashboardOverview() {
       </div>
 
       {draw && (
-        <Card className="bg-gradient-to-br from-secondary/10 to-primary/10">
-          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Latest draw result</p>
-              <div className="mt-2 flex gap-2">
-                {draw.winningNumbers.map((n) => (
-                  <span
-                    key={n}
-                    className="grid size-9 place-items-center rounded-full bg-primary font-semibold tabular-nums text-primary-foreground"
-                  >
-                    {n}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <Button variant="outline" className="rounded-full" asChild>
-              <Link href="/dashboard/draws">View draws</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div
+          className={cn(
+            // Mobile: pinned to the bottom with margin. Desktop: inline.
+            "fixed inset-x-0 bottom-0 z-30 p-4",
+            "md:static md:inset-x-auto md:bottom-auto md:z-auto md:p-0",
+          )}
+        >
+          <div className="relative mx-auto max-w-6xl">
+            {/* Glow */}
+            {/* <div
+              aria-hidden
+              className="pointer-events-none absolute -inset-1 rounded-3xl bg-gradient-to-r from-primary via-secondary to-accent opacity-40 blur-xl animate-gradient"
+            /> */}
+            <Card className="relative overflow-hidden border-primary/30 bg-card  shadow-primary/20">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-gradient-to-br from-secondary/15 to-primary/15"
+              />
+              <CardContent className="relative flex flex-wrap items-center justify-between gap-4 p-5 md:p-6">
+                <div>
+                  <p className="text-sm text-muted-foreground">Latest draw result</p>
+                  <div className="mt-2 flex gap-2">
+                    {draw.winningNumbers.map((n) => (
+                      <span
+                        key={n}
+                        className="grid size-9 place-items-center rounded-full bg-primary font-semibold tabular-nums text-primary-foreground shadow-sm"
+                      >
+                        {n}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <Button  className=" bg-primary rounded-full" asChild>
+                  <Link href="/dashboard/draws">View draws</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
     </div>
   );

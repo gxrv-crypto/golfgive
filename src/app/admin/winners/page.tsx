@@ -2,6 +2,7 @@ import { WinnersManager } from "@/components/admin/winners-manager";
 import { requireRole } from "@/lib/auth/session";
 import { listWinners } from "@/lib/services/winner-service";
 import { listUsers } from "@/lib/services/profile-service";
+import { getProofSignedUrl } from "@/lib/supabase/storage";
 import type { PayoutDetails } from "@/types";
 
 export default async function AdminWinnersPage() {
@@ -18,5 +19,13 @@ export default async function AdminWinnersPage() {
     };
   }
 
-  return <WinnersManager winners={winners} payouts={payouts} />;
+  // Short-lived signed URLs so admins can view private proof files.
+  const proofUrls: Record<string, string | null> = {};
+  await Promise.all(
+    winners.map(async (w) => {
+      proofUrls[w.id] = await getProofSignedUrl(w.proofUrl);
+    }),
+  );
+
+  return <WinnersManager winners={winners} payouts={payouts} proofUrls={proofUrls} />;
 }

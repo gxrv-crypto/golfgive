@@ -6,7 +6,7 @@
 import "server-only";
 import { getRepos } from "@/lib/db/repositories";
 import { PLANS, type PlanId } from "@/lib/config";
-import type { Subscription } from "@/types";
+import type { Subscription, SessionUser } from "@/types";
 
 export async function getSubscription(userId: string): Promise<Subscription | null> {
   return getRepos().subscriptions.getByUser(userId);
@@ -20,6 +20,22 @@ export async function isActive(userId: string): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+/**
+ * Real-time access gate for subscriber-only features (PRD §04).
+ * Re-checks the live subscription status on every call. Admins are exempt.
+ * Throws SUBSCRIPTION_REQUIRED when access should be restricted.
+ */
+export async function requireActiveSubscription(user: SessionUser): Promise<void> {
+  if (user.role === "admin") return;
+  const active = await isActive(user.id);
+  if (!active) throw new Error("SUBSCRIPTION_REQUIRED");
+}
+
+/** Cancel the current subscription (PRD §04 lifecycle). */
+export async function cancelSubscription(userId: string): Promise<Subscription> {
+  return getRepos().subscriptions.upsert({ userId, status: "cancelled" });
 }
 
 /** Record a not-yet-paid subscription before opening Razorpay Checkout. */

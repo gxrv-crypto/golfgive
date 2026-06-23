@@ -18,12 +18,20 @@ function DialogContent({
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border bg-card p-6 shadow-lg",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+          "fixed z-50 grid gap-4 border bg-card p-6 shadow-lg",
+          // Mobile: bottom sheet — full width, slides up from the bottom.
+          "inset-x-0 bottom-0 w-full max-h-[90vh] overflow-y-auto rounded-t-2xl rounded-b-none",
+          "max-sm:data-[state=open]:slide-in-from-bottom max-sm:data-[state=closed]:slide-out-to-bottom",
+          // Desktop: centered modal.
+          "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl",
+          "sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           className,
         )}
         {...props}
       >
+        {/* Grab handle (mobile bottom-sheet affordance) */}
+        <div className="mx-auto -mt-2 mb-1 h-1.5 w-12 shrink-0 rounded-full bg-border sm:hidden" />
         {children}
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring/40">
           <X className="size-4" />

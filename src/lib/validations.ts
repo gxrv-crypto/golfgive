@@ -5,18 +5,39 @@
 import { z } from "zod";
 import { SCORE, MIN_CHARITY_PCT, DRAW } from "@/lib/config";
 
+/** Strong password: 8+ chars with lowercase, uppercase and a number. */
+export const strongPassword = z
+  .string()
+  .min(8, "At least 8 characters")
+  .regex(/[a-z]/, "Add a lowercase letter")
+  .regex(/[A-Z]/, "Add an uppercase letter")
+  .regex(/[0-9]/, "Add a number");
+
 export const signupSchema = z.object({
   name: z.string().min(2, "Please enter your name").max(80),
   email: z.string().email("Enter a valid email"),
-  password: z.string().min(8, "At least 8 characters"),
+  password: strongPassword,
+  acceptTerms: z
+    .boolean()
+    .refine((v) => v === true, "Please accept the Terms & Conditions"),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Enter a valid email"),
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const changePasswordSchema = z.object({
+  password: strongPassword,
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export const scoreSchema = z.object({
   value: z

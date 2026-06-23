@@ -26,19 +26,23 @@ import {
 import { TIERS } from "@/lib/config";
 import { formatCurrency } from "@/lib/format";
 import { simulateDrawAction, publishDrawAction } from "@/lib/actions/draw-actions";
-import type { DrawResult, DrawLogic } from "@/types";
+import type { DrawResult, DrawLogic, DrawWeighting } from "@/types";
+
+type DrawMode = "random" | "algorithmic-most" | "algorithmic-least";
 
 export function DrawRunner({ defaultPeriod }: { defaultPeriod: string }) {
   const [period, setPeriod] = React.useState(defaultPeriod);
-  const [logic, setLogic] = React.useState<DrawLogic>("random");
+  const [mode, setMode] = React.useState<DrawMode>("random");
   const [result, setResult] = React.useState<DrawResult | null>(null);
   const [simulated, setSimulated] = React.useState(false);
   const [pending, start] = React.useTransition();
 
   function run(publish: boolean) {
+    const logic: DrawLogic = mode === "random" ? "random" : "algorithmic";
+    const weighting: DrawWeighting = mode === "algorithmic-least" ? "least" : "most";
     start(async () => {
       const action = publish ? publishDrawAction : simulateDrawAction;
-      const res = await action(period, logic);
+      const res = await action(period, logic, weighting);
       if (!res.ok) { toast.error(res.error); return; }
       setResult(res.data ?? null);
       setSimulated(!publish);
@@ -63,13 +67,14 @@ export function DrawRunner({ defaultPeriod }: { defaultPeriod: string }) {
             </div>
             <div className="space-y-2">
               <Label>Draw logic</Label>
-              <Select value={logic} onValueChange={(v) => setLogic(v as DrawLogic)}>
+              <Select value={mode} onValueChange={(v) => setMode(v as DrawMode)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="random">Random (lottery)</SelectItem>
-                  <SelectItem value="algorithmic">Algorithmic (score-weighted)</SelectItem>
+                  <SelectItem value="algorithmic-most">Algorithmic — most frequent scores</SelectItem>
+                  <SelectItem value="algorithmic-least">Algorithmic — least frequent scores</SelectItem>
                 </SelectContent>
               </Select>
             </div>

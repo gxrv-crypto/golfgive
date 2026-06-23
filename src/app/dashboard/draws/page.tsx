@@ -3,21 +3,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { LuckyNumbers } from "@/components/dashboard/lucky-numbers";
+import { SubscribeGate } from "@/components/dashboard/subscribe-gate";
 import { requireUser } from "@/lib/auth/session";
 import { getProfile } from "@/lib/services/profile-service";
 import { listDraws } from "@/lib/services/draw-service";
+import { isActive } from "@/lib/services/subscription-service";
 import { formatPeriod, formatCurrency, currentPeriod } from "@/lib/format";
 import { TIERS } from "@/lib/config";
 
 export default async function DrawsPage() {
   const user = await requireUser();
-  const [profile, draws] = await Promise.all([getProfile(user.id), listDraws()]);
+  const [profile, draws, active] = await Promise.all([
+    getProfile(user.id),
+    listDraws(),
+    isActive(user.id),
+  ]);
   const published = draws.filter((d) => d.status === "published");
   const myNumbers = profile?.luckyNumbers ?? [];
+  const allowed = active || user.role === "admin";
 
   return (
     <div className="space-y-6">
-      <LuckyNumbers initial={myNumbers} />
+      {allowed ? (
+        <LuckyNumbers initial={myNumbers} />
+      ) : (
+        <SubscribeGate feature="Draw entry" />
+      )}
 
       <Card className="bg-gradient-to-br from-secondary/10 to-primary/10">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-6">
@@ -26,14 +37,16 @@ export default async function DrawsPage() {
             <div>
               <p className="font-semibold">Next draw · {formatPeriod(currentPeriod())}</p>
               <p className="text-sm text-muted-foreground">
-                {myNumbers.length === 5
+                {allowed && myNumbers.length === 5
                   ? "You're entered with your lucky numbers."
-                  : "Pick your numbers above to enter."}
+                  : allowed
+                    ? "Pick your numbers above to enter."
+                    : "Subscribe to enter the draw."}
               </p>
             </div>
           </div>
-          <Badge variant={myNumbers.length === 5 ? "success" : "warning"}>
-            {myNumbers.length === 5 ? "Entered" : "Not entered"}
+          <Badge variant={allowed && myNumbers.length === 5 ? "success" : "warning"}>
+            {allowed && myNumbers.length === 5 ? "Entered" : "Not entered"}
           </Badge>
         </CardContent>
       </Card>

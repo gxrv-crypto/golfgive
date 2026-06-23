@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarDays, MapPin, Target, Landmark, ArrowUpRight } from 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SmartImage } from "@/components/shared/smart-image";
 import { getCharity, listCharities } from "@/lib/services/charity-service";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { MIN_CHARITY_PCT } from "@/lib/config";
@@ -99,10 +100,11 @@ export default async function CharityProfile({
         <aside className="md:col-span-5 space-y-6 md:sticky md:top-20">
           {/* Card housing Image */}
           <div className="overflow-hidden rounded-3xl border border-border/40 shadow-md">
-            <img
+            <SmartImage
               src={charity.imageUrl}
               alt={charity.name}
-              className="aspect-[16/10] w-full object-cover"
+              className="aspect-[16/10] w-full"
+              sizes="(max-width: 768px) 100vw, 40vw"
             />
           </div>
 

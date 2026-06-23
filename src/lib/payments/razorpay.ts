@@ -11,12 +11,82 @@
  */
 import "server-only";
 import crypto from "node:crypto";
-import { isRazorpayConfigured, PLANS, type PlanId } from "@/lib/config";
+import { APP, isRazorpayConfigured, PLANS, type PlanId } from "@/lib/config";
 
 export interface CreatedSubscription {
   subscriptionId: string;
   customerId: string | null;
   mock: boolean;
+}
+
+export interface CreatedOrder {
+  orderId: string;
+  amount: number; // in paise
+  currency: string;
+  mock: boolean;
+}
+
+/**
+ * Create a one-time Razorpay Order for a plan's price.
+ *
+ * We use Orders (not the Subscriptions API) for checkout because Razorpay's
+ * recurring/e-mandate checkout requires an activated account with the
+ * Subscriptions feature enabled; Orders work on any test account. The recurring
+ * period is then tracked in our own `subscriptions` table. `createSubscription`
+ * remains available for when the account is activated.
+ */
+export async function createOrder(plan: PlanId): Promise<CreatedOrder> {
+  const amount = PLANS[plan].price * 100; // paise
+  if (!isRazorpayConfigured()) {
+    return {
+      orderId: `order_mock_${crypto.randomBytes(6).toString("hex")}`,
+      amount,
+      currency: APP.currency,
+      mock: true,
+    };
+  }
+
+  const { default: Razorpay } = await import("razorpay");
+  const client = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID!,
+    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  });
+
+  const order = await client.orders.create({
+    amount,
+    currency: APP.currency,
+    receipt: `gg_${plan}_${Date.now()}`,
+    notes: { plan },
+  });
+
+  return {
+    orderId: order.id,
+    amount: Number(order.amount),
+    currency: order.currency,
+    mock: false,
+  };
+}
+
+/** Verify the Order checkout handshake (order_id|payment_id). */
+export function verifyOrderSignature(params: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}): boolean {
+  const secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!secret) return false;
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(`${params.razorpay_order_id}|${params.razorpay_payment_id}`)
+    .digest("hex");
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(expected),
+      Buffer.from(params.razorpay_signature),
+    );
+  } catch {
+    return false;
+  }
 }
 
 export async function createSubscription(

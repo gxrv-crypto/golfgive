@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Users, TrendingUp, HeartHandshake, Dice5, Trophy, Clock } from "lucide-react";
+import { Users, TrendingUp, HeartHandshake, Dice5, Trophy, Clock, BadgeIndianRupee, Coins, Gift } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,19 @@ export default async function AdminOverview() {
         <StatCard label="Charity raised" value={formatCurrency(stats.charityContributions)} icon={HeartHandshake} accent="accent" />
         <StatCard label="Draws published" value={stats.totalDraws} icon={Trophy} />
         <StatCard label="Pending winners" value={stats.pendingWinners} icon={Clock} accent="warning" />
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center gap-3">
+          <h3 className="font-display text-lg font-semibold">Draw statistics</h3>
+          <Separator className="flex-1" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Total winners" value={stats.totalWinners} icon={Gift} accent="secondary" />
+          <StatCard label="Total paid out" value={formatCurrency(stats.totalPaidOut)} icon={BadgeIndianRupee} accent="success" />
+          <StatCard label="Pending payout" value={formatCurrency(stats.pendingPayout)} icon={Clock} accent="warning" />
+          <StatCard label="Current jackpot" value={formatCurrency(stats.currentJackpot)} icon={Coins} accent="primary" hint={`Avg pool ${formatCurrency(stats.avgPoolPerDraw)}/draw`} />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Reveal } from "@/components/shared/reveal";
+import { SmartImage } from "@/components/shared/smart-image";
 import { TIERS, MIN_CHARITY_PCT, SCORE, DRAW } from "@/lib/config";
 
 export const metadata: Metadata = { title: "How it works" };
@@ -73,12 +74,14 @@ export default function HowItWorksPage() {
                 {/* Image half */}
                 <div className={`md:col-span-6 ${isEven ? "md:order-1" : "md:order-2"}`}>
                   <div className="relative group overflow-hidden rounded-3xl border border-border/40 bg-muted/40 shadow-md transition-all duration-300 hover:scale-[1.01] hover:shadow-xl dark:border-white/5">
-                    <img 
-                      src={s.image} 
-                      alt={s.title} 
-                      className="w-full aspect-[4/3] object-cover transition-transform duration-700 group-hover:scale-103"
+                    <SmartImage
+                      src={s.image}
+                      alt={s.title}
+                      className="aspect-[4/3] w-full"
+                      imageClassName="transition-transform duration-700 group-hover:scale-103"
+                      sizes="(max-width: 768px) 100vw, 50vw"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                    <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                   </div>
                 </div>
 

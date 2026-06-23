@@ -24,7 +24,7 @@ interface RazorpayCheckout {
 }
 interface RazorpayResponse {
   razorpay_payment_id: string;
-  razorpay_subscription_id: string;
+  razorpay_order_id: string;
   razorpay_signature: string;
 }
 declare global {
@@ -97,7 +97,9 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
 
       const rzp = new window.Razorpay({
         key: data.keyId,
-        subscription_id: data.subscriptionId,
+        order_id: data.orderId,
+        amount: data.amount,
+        currency: data.currency,
         name: APP.name,
         description: `${PLANS[plan].name} subscription`,
         prefill: { name: data.name, email: data.email },
@@ -106,7 +108,7 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
           start(async () => {
             const v = await verifySubscriptionAction({
               razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_subscription_id: response.razorpay_subscription_id,
+              razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
             });
             if (!v.ok) {
@@ -154,7 +156,9 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
                   onClick={() => setPlan(id)}
                   className={cn(
                     "rounded-xl border p-5 text-left transition-all",
-                    active ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/40",
+                    active
+                      ? "animate-gradient border-transparent bg-gradient-to-br from-primary via-secondary to-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "hover:border-primary/40",
                   )}
                 >
                   <div className="flex items-center justify-between">
@@ -163,7 +167,14 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
                   </div>
                   <p className="mt-2 font-display text-2xl font-bold">
                     {formatCurrency(p.price)}
-                    <span className="text-sm font-normal text-muted-foreground">/{p.interval}</span>
+                    <span
+                      className={cn(
+                        "text-sm font-normal",
+                        active ? "text-primary-foreground/80" : "text-muted-foreground",
+                      )}
+                    >
+                      /{p.interval}
+                    </span>
                   </p>
                 </button>
               );
@@ -184,13 +195,15 @@ function SubscribeInner({ charities }: { charities: Charity[] }) {
                   onClick={() => setCharityId(c.id)}
                   className={cn(
                     "flex items-center gap-3 rounded-xl border p-3 text-left transition-all",
-                    active ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/40",
+                    active
+                      ? "animate-gradient border-transparent bg-gradient-to-br from-primary via-secondary to-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "hover:border-primary/40",
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={c.imageUrl} alt={c.name} className="size-11 shrink-0 rounded-lg object-cover" />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.name}</span>
-                  {active && <Check className="size-4 shrink-0 text-primary" />}
+                  {active && <Check className="size-4 shrink-0" />}
                 </button>
               );
             })}

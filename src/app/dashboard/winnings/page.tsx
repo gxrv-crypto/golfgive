@@ -1,4 +1,4 @@
-import { Trophy, Clock } from "lucide-react";
+import { Trophy, Clock, CheckCircle2 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { WinningsList } from "@/components/dashboard/winnings-list";
 import { PayoutDetailsForm } from "@/components/dashboard/payout-details-form";
@@ -14,16 +14,20 @@ export default async function WinningsPage() {
     getProfile(user.id),
   ]);
   const total = winners.reduce((s, w) => s + w.amount, 0);
-  const pending = winners.filter((w) => w.status !== "paid").length;
+  const paidAmount = winners
+    .filter((w) => w.status === "paid")
+    .reduce((s, w) => s + w.amount, 0);
+  const pendingAmount = total - paidAmount;
   const hasPayoutDetails = Boolean(profile?.payoutUpi || profile?.payoutAccountNumber);
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Total won" value={formatCurrency(total)} icon={Trophy} accent="secondary" />
+        <StatCard label="Paid out" value={formatCurrency(paidAmount)} icon={CheckCircle2} accent="success" />
         <StatCard
-          label="Pending payouts"
-          value={pending}
+          label="Pending payout"
+          value={formatCurrency(pendingAmount)}
           icon={Clock}
           accent="warning"
           hint="Awaiting admin payout"

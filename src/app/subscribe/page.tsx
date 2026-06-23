@@ -15,7 +15,7 @@ export default async function SubscribePage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex h-16 items-center justify-between border-b px-4">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md backdrop-saturate-150">
         <Logo />
         <div className="flex items-center gap-2">
           <ThemeToggle />

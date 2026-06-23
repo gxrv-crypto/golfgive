@@ -18,7 +18,7 @@ import {
   PRIZE_POOL_CONTRIBUTION_PCT,
   type DrawTier,
 } from "@/lib/config";
-import type { Draw, DrawResult, DrawLogic, PrizePool, Winner } from "@/types";
+import type { Draw, DrawResult, DrawLogic, DrawWeighting, PrizePool, Winner } from "@/types";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -34,8 +34,11 @@ function randomNumbers(): number[] {
   return shuffle(pool).slice(0, DRAW.pick).sort((a, b) => a - b);
 }
 
-/** Bias the draw toward the most frequently played score values across users. */
-async function algorithmicNumbers(): Promise<number[]> {
+/**
+ * Bias the draw toward the most- or least-frequently played score values
+ * across all users (PRD §06 algorithmic option).
+ */
+async function algorithmicNumbers(weighting: DrawWeighting): Promise<number[]> {
   const repos = getRepos();
   const profiles = await repos.profiles.list();
   const freq = new Map<number, number>();
@@ -48,7 +51,7 @@ async function algorithmicNumbers(): Promise<number[]> {
     }
   }
   const ranked = [...freq.entries()]
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => (weighting === "least" ? a[1] - b[1] : b[1] - a[1]))
     .map(([v]) => v);
 
   const picked = new Set<number>(ranked.slice(0, DRAW.pick));
@@ -80,11 +83,15 @@ function matchCount(picks: number[], winning: number[]): number {
  * Core computation shared by simulate + publish.
  * Returns the (unpersisted) draw, pools and winners.
  */
-async function compute(period: string, logic: DrawLogic): Promise<DrawResult> {
+async function compute(
+  period: string,
+  logic: DrawLogic,
+  weighting: DrawWeighting = "most",
+): Promise<DrawResult> {
   const repos = getRepos();
 
   const winningNumbers =
-    logic === "algorithmic" ? await algorithmicNumbers() : randomNumbers();
+    logic === "algorithmic" ? await algorithmicNumbers(weighting) : randomNumbers();
 
   const basePool = await computePoolTotal();
 
@@ -169,14 +176,22 @@ async function compute(period: string, logic: DrawLogic): Promise<DrawResult> {
 }
 
 /** Pre-analysis: compute everything, persist nothing. */
-export async function simulateDraw(period: string, logic: DrawLogic): Promise<DrawResult> {
-  return compute(period, logic);
+export async function simulateDraw(
+  period: string,
+  logic: DrawLogic,
+  weighting: DrawWeighting = "most",
+): Promise<DrawResult> {
+  return compute(period, logic, weighting);
 }
 
 /** Official run: persist the draw + winners and carry the jackpot forward. */
-export async function publishDraw(period: string, logic: DrawLogic): Promise<DrawResult> {
+export async function publishDraw(
+  period: string,
+  logic: DrawLogic,
+  weighting: DrawWeighting = "most",
+): Promise<DrawResult> {
   const repos = getRepos();
-  const result = await compute(period, logic);
+  const result = await compute(period, logic, weighting);
 
   const draw = await repos.draws.upsert({
     period,

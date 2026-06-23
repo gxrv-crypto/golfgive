@@ -17,6 +17,7 @@ import {
   Phone,
   MapPin,
   User,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -320,6 +321,65 @@ npm run seed          # charities + demo subscriber + a published draw`}</CodeBl
           Services never know which repository backs them, so the in-memory store
           swaps for Supabase with no UI or logic changes. Full diagrams and the
           request lifecycle are in <Code>ARCHITECTURE.md</Code>.
+        </p>
+      </Prose>
+    ),
+  },
+  {
+    id: "seo",
+    label: "SEO & metadata",
+    icon: Search,
+    body: (
+      <Prose>
+        <p>
+          The app ships with a full technical-SEO baseline, single-sourced from{" "}
+          <Code>src/lib/seo.ts</Code> and driven by the canonical origin{" "}
+          <Code>NEXT_PUBLIC_SITE_URL</Code>:
+        </p>
+        <ul className="list-disc space-y-1.5 pl-5">
+          <li>
+            <strong className="text-foreground">Rich metadata</strong> — title
+            templates, description, keywords, canonical URLs, Open Graph &amp;
+            Twitter cards, and a robots policy (root <Code>metadata</Code> +
+            per-page <Code>generateMetadata</Code>).
+          </li>
+          <li>
+            <strong className="text-foreground">JSON-LD structured data</strong> —{" "}
+            <Code>Organization</Code> and <Code>WebSite</Code> (with site search)
+            site-wide, plus <Code>NGO</Code> + <Code>BreadcrumbList</Code> on each
+            charity profile.
+          </li>
+          <li>
+            <strong className="text-foreground">robots.txt</strong> (
+            <Code>src/app/robots.ts</Code>) — allows public pages, blocks{" "}
+            <Code>/admin</Code>, <Code>/dashboard</Code>, <Code>/api</Code> &amp;
+            auth routes, and points to the sitemap.
+          </li>
+          <li>
+            <strong className="text-foreground">Dynamic sitemap</strong> (
+            <Code>src/app/sitemap.ts</Code>) — static public routes plus one entry
+            per charity, generated from live data.
+          </li>
+          <li>
+            <strong className="text-foreground">Dynamic OG / Twitter images</strong>{" "}
+            — rendered on the fly with <Code>next/og</Code> (
+            <Code>opengraph-image.tsx</Code>).
+          </li>
+          <li>
+            <strong className="text-foreground">Favicon &amp; icons</strong> —{" "}
+            <Code>favicon.ico</Code> + scalable <Code>icon.svg</Code>, a PWA web
+            manifest (<Code>manifest.ts</Code>), and light/dark theme colors.
+          </li>
+        </ul>
+        <p>
+          Set your production domain so absolute URLs resolve correctly:
+        </p>
+        <CodeBlock>{`# .env.local
+NEXT_PUBLIC_SITE_URL=https://your-domain.com`}</CodeBlock>
+        <p>
+          Verify the generated routes at <Code>/robots.txt</Code>,{" "}
+          <Code>/sitemap.xml</Code>, <Code>/manifest.webmanifest</Code> and{" "}
+          <Code>/opengraph-image</Code>.
         </p>
       </Prose>
     ),

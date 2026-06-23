@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, MapPin, Target, Landmark, ArrowUpRight } from "lucide-react";
@@ -5,13 +6,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SmartImage } from "@/components/shared/smart-image";
+import { JsonLd } from "@/components/seo/json-ld";
 import { getCharity, listCharities } from "@/lib/services/charity-service";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { MIN_CHARITY_PCT } from "@/lib/config";
+import { charityJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 
 export async function generateStaticParams() {
   const charities = await listCharities();
   return charities.map((c) => ({ id: c.id }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const charity = await getCharity(id);
+  if (!charity) return { title: "Charity not found" };
+
+  const description = charity.description.slice(0, 160);
+  return {
+    title: charity.name,
+    description,
+    alternates: { canonical: `/charities/${charity.id}` },
+    openGraph: {
+      type: "article",
+      title: `${charity.name} · ${charity.category}`,
+      description,
+      url: `/charities/${charity.id}`,
+      ...(charity.imageUrl ? { images: [{ url: charity.imageUrl }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${charity.name} · ${charity.category}`,
+      description,
+    },
+  };
 }
 
 export default async function CharityProfile({
@@ -25,6 +57,16 @@ export default async function CharityProfile({
 
   return (
     <article className="mx-auto max-w-6xl px-4 py-12 space-y-8">
+      <JsonLd
+        data={[
+          charityJsonLd(charity),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Charities", path: "/charities" },
+            { name: charity.name, path: `/charities/${charity.id}` },
+          ]),
+        ]}
+      />
       {/* Back Button */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" asChild className="rounded-full">

@@ -161,6 +161,23 @@ Avatars and charity images upload to **Supabase Storage** (public `avatars` /
 bodies at 1 MB by default, the limit is raised to `SERVER_ACTIONS_BODY_SIZE_LIMIT`
 (default `6mb`); charity image size is capped by `CHARITY_IMAGE_MAX_MB` (default `5`).
 
+### SEO
+
+A full technical-SEO baseline ships out of the box, single-sourced from
+[src/lib/seo.ts](src/lib/seo.ts) and driven by `NEXT_PUBLIC_SITE_URL`:
+
+- **Metadata** — title templates, description, keywords, canonical URLs, Open
+  Graph + Twitter cards and a robots policy (root + per-page `generateMetadata`).
+- **JSON-LD** — `Organization` + `WebSite` site-wide; `NGO` + `BreadcrumbList`
+  on charity profiles.
+- **`/robots.txt`** ([robots.ts](src/app/robots.ts)) and a **dynamic
+  `/sitemap.xml`** ([sitemap.ts](src/app/sitemap.ts), includes every charity).
+- **Dynamic OG/Twitter images** via `next/og` ([opengraph-image.tsx](src/app/opengraph-image.tsx)).
+- **Icons & PWA** — `favicon.ico`, scalable `icon.svg`, web manifest
+  ([manifest.ts](src/app/manifest.ts)) and light/dark theme colors.
+
+Set `NEXT_PUBLIC_SITE_URL` to your production domain so absolute URLs resolve.
+
 ---
 
 ## 📚 Documentation
